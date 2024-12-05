@@ -8,6 +8,7 @@ import weka.filters.unsupervised.attribute.InterquartileRange;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.attribute.ReplaceMissingValues;
 import weka.filters.unsupervised.instance.RemoveWithValues;
+import weka.filters.unsupervised.attribute.Normalize;
 
 import java.io.File;
 
@@ -35,14 +36,21 @@ public class Preprocessing {
         saver.writeBatch();
         System.out.println("Saved missing.arff");
 
-        /* Detect Outliers and Extreme Values */
+        /* Step 2: Detect Outliers and Extreme Values */
         // Load dataset with missing values replaced
         DataSource source1 = new DataSource(baseDir + "missing.arff");
         Instances dataset1 = source1.getDataSet();
         System.out.println("Loaded missing.arff");
 
         // Apply InterquartileRange filter
-        String opt1[] = new String[]{"-R", "first-last", "-O", "3.0", "-E", "6.0"};
+        String opt1[] = new String[] {
+            "-R",
+            "first-last",
+            "-O",
+            "3.0",
+            "-E",
+            "6.0"
+        };
         InterquartileRange range = new InterquartileRange();
         range.setOptions(opt1);
         range.setInputFormat(dataset1);
@@ -55,14 +63,28 @@ public class Preprocessing {
         saver.writeBatch();
         System.out.println("Saved ranged.arff");
 
-        /* Remove Outliers and Extreme Values */
+        /* Step 3: Remove Outliers and Extreme Values */
         // Load dataset with detected outliers and extreme values
         DataSource source2 = new DataSource(baseDir + "ranged.arff");
         Instances dataset2 = source2.getDataSet();
         System.out.println("Loaded ranged.arff");
 
-        String optOutlier[] = new String[]{"-S", "0.0", "-C", "22", "-L", "last"};
-        String optExtreme[] = new String[]{"-S", "0.0", "-C", "23", "-L", "last"};
+        String optOutlier[] = new String[] {
+            "-S",
+            "0.0",
+            "-C",
+            "22",
+            "-L",
+            "last"
+        };
+        String optExtreme[] = new String[] {
+            "-S",
+            "0.0",
+            "-C",
+            "23",
+            "-L",
+            "last"
+        };
 
         // Remove outliers
         RemoveWithValues removeOutlier = new RemoveWithValues();
@@ -88,12 +110,15 @@ public class Preprocessing {
         saver.writeBatch();
         System.out.println("Saved extremeRemoved.arff");
 
-        /* Remove Outlier and Extreme Value Attributes */
+        /* Step 4: Remove Outlier and Extreme Value Attributes */
         source = new DataSource(baseDir + "extremeRemoved.arff");
         dataset = source.getDataSet();
         System.out.println("Loaded extremeRemoved.arff");
 
-        String opt2[] = new String[]{"-R", "22,23"};
+        String opt2[] = new String[] {
+            "-R",
+            "22,23"
+        };
         Remove remove = new Remove();
         remove.setOptions(opt2);
         remove.setInputFormat(dataset);
@@ -106,7 +131,7 @@ public class Preprocessing {
         saver.writeBatch();
         System.out.println("Saved final.arff");
 
-        /* Correlation Analysis */
+        /* Step 5: Correlation Analysis */
         source = new DataSource(baseDir + "final.arff");
         dataset = source.getDataSet();
         CorrelationAttributeEval cEval = new CorrelationAttributeEval();
@@ -126,13 +151,20 @@ public class Preprocessing {
         }
         System.out.println("Correlation analysis completed");
 
-        /* Discretize Attributes */
+        /* Step 6: Discretize Attributes */
         source = new DataSource(baseDir + "final.arff");
         dataset = source.getDataSet();
         System.out.println("Loaded final.arff for discretization");
 
         // Apply Discretize filter
-        String op3[] = new String[]{"-B", "10", "-M", "-1.0", "-R", "first-last"};
+        String op3[] = new String[] {
+            "-B",
+            "10",
+            "-M",
+            "-1.0",
+            "-R",
+            "first-last"
+        };
         Discretize discretize = new Discretize();
         discretize.setOptions(op3);
         discretize.setInputFormat(dataset);
@@ -144,5 +176,21 @@ public class Preprocessing {
         saver.setFile(new File(baseDir + "discretized.arff"));
         saver.writeBatch();
         System.out.println("Saved discretized.arff");
+
+        /* Additional Step: Normalize Data */
+        source = new DataSource(baseDir + "discretized.arff");
+        dataset = source.getDataSet();
+        System.out.println("Loaded discretized.arff for normalization");
+
+        Normalize normalize = new Normalize();
+        normalize.setInputFormat(dataset);
+        newData = Filter.useFilter(dataset, normalize);
+        System.out.println("Applied Normalize filter");
+
+        // Save the normalized dataset
+        saver.setInstances(newData);
+        saver.setFile(new File(baseDir + "normalized.arff"));
+        saver.writeBatch();
+        System.out.println("Saved normalized.arff");
     }
 }
